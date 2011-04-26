@@ -1,0 +1,244 @@
+<% content_for :head do %>
+  <%= stylesheet_link_tag "flashcard", "footer",  "mp3-player-button" %>
+  <%= javascript_include_tag "jquery.keyNavi", "soundmanager2" %>
+  
+  <script type="text/javascript">
+    
+  var slideWidth = 650;
+  var currentPosition = 0;
+  var loadCount = 2; // preloaded 2 cards on first load.
+  // dataSets of the words from a set; note they are randomized from the server. 
+  var dataSet = <%= raw(@words.collect(&:name).inspect) %>; 
+  var dataSetId = <%= raw(@words.collect(&:id).inspect) %>; 
+  var numberOfSlides = <%= @words.size %>;
+  
+  var app = {
+    /**
+    * Binds your keyboard Left, Right, Up, Down.
+    * Left and right binds move to the next flashcard in the sequence. 
+    * Up and down toggles the hidden div to display the last selected word's definition. 
+    */
+    setupKeyboard: function(){
+      $.keyNavi(function(){
+        if(!$("#leftControl").is(":hidden"))
+          $("#leftControl").trigger("click");
+      }, function(){
+        if(!$("#rightControl").is(":hidden"))
+          $("#rightControl").trigger("click");
+      }, function(){
+        $('#footerSlideContent').slideToggle(true); 
+      }, function(){
+        $('#footerSlideContent').slideToggle(false);
+      });
+    },
+    
+    /**
+    * Set up tabs to either hide or show thier respective <div> elements. 
+    */ 
+    setupTabs: function(){
+      $(".tab_content").hide(); //Hide all content
+    	$("ul.tabs li:first").addClass("active").show(); //Activate first tab
+    	$(".tab_content:first").show(); //Show first tab content
+
+    	//On Click Event
+    	$("ul.tabs li").click(function() {
+
+    		$("ul.tabs li").removeClass("active"); //Remove any "active" class
+    		$(this).addClass("active"); //Add "active" class to selected tab
+    		$(".tab_content").hide(); //Hide all tab content
+
+    		var activeTab = $(this).find("a").attr("href"); //Find the href attribute value to identify the active tab + content
+    		$(activeTab).fadeIn(); //Fade in the active ID content
+    		return false;
+    	});
+    },
+    
+    /**
+    * Ensure all flashcards are of the same size and width, flashcard are arranged 
+    * in a horizontal manner and acts like a window frame exposing hidden cards. 
+    */
+    setupCards: function(){
+      $.each(dataSet, function(i, word){
+        var slideDiv = "<div class='slide'><div id=" + i + 
+        " class='flashcard'><div class='card'><div id='word' class='word'>" + word + 
+        "<a href='#' class='hidden' id='audiolink'></a>" +
+        "</div><div id='definition' class='hidden'><ol class='def-list'></ol>" +
+        "</div></div></div></div>";
+        $('#slidesContainer').append(slideDiv);
+      });
+            
+      // Should pre-load 2 before rendering and not use AJAX
+      app.populateCard(0);
+      app.getWordAudio(0);
+      app.populateCard(1);
+
+      // Remove scrollbar in JS
+      $('#slidesContainer').css('overflow', 'hidden');
+
+      var $cards = $('.slide');
+      $cards.wrapAll('<div id="slideInner"></div>')
+    	  .css({
+          'float' : 'left',
+          'width' : slideWidth
+        });
+
+      // Set #slideInner width equal to total width of all slides
+      $('#slideInner').css('width', slideWidth * numberOfSlides);
+
+      // Insert controls in the DOM
+      $('#slideshow')
+        .prepend('<span class="control" id="leftControl"></span>')
+        .append('<span class="control" id="rightControl"></span>');
+
+      // Hide left arrow control on first load
+      this.manageControls(currentPosition);
+    },
+    
+    /**
+    * Determines the next position of the card and whether controls and text on the card 
+    * should be shown. 
+    * position: integer representation of the next index card. 
+    */
+    manageControls: function(position){
+      // Hide left arrow if position is first slide
+  	  if(position==0){ $('#leftControl').hide() } else{ $('#leftControl').show() }
+  	  // Hide right arrow if position is last slide
+      if(position==numberOfSlides-1){ $('#rightControl').hide() } else{ $('#rightControl').show() } 
+    },
+    
+    /**
+    * Populate card from the server via AJAX. Populated content becomes static, meaning each card
+    * is only populated once via AJAX and stored on to HTML (until the page is refresehed).
+    * index: integer representation of the index from array of words. (current position)
+    */
+    populateCard: function(index){
+      $.ajax({
+        dataType: 'json',
+        url: "/wordnik/definitions/" + dataSet[index],
+        success : function(result){
+          var $container = $('#'+ index);
+          var $content = $container.find('.card');
+          var $ol = $content.find('.def-list');
+          
+          $.each(result, function(index, data){
+            var $posDiv = $('<div class="pos" id="'+ data.partOfSpeech +'">&ndash;' + data.partOfSpeech + '</div>');
+            if($ol.find('.pos[id="'+ data.partOfSpeech +'"]').length == 0) {
+              $posDiv.appendTo($ol);
+            }
+            var $def = $('<li>' + data.text + '</li>');
+            $def.appendTo($ol);
+          });
+        }
+      });
+    },
+
+    /**
+    * Set up "live" binds on all <li> elements in the list of selected-able Mnemonics from 
+    * other users (from facebook). Selected elements are then inform to the server and set
+    * as the current user's default mnemonic for this word.       
+    */
+    setupLiveBinds: function(){
+      $('.slide .flashcard').live('click.flashcardToggle', function(){
+        var $word = $(this).find('#word');
+        var $definition = $(this).find('#definition');
+        
+        if($definition.hasClass('hidden')) {
+          $definition.removeClass().addClass('definition');
+          $word.removeClass().addClass('title');
+          $(this).find('#audiolink').removeClass().addClass('sm2_button');
+          $(this).find('#mute').show();
+        }else{
+          $definition.removeClass().addClass('hidden');
+          $word.removeClass().addClass('word');
+          $(this).find('#audiolink').removeClass().addClass('hidden');
+          $(this).find('#mute').hide();
+        }
+        return false;
+      });
+      
+      $('#audiolink').live('click.playAudio', function(){
+        soundManager.play('word');
+        return false;
+      });
+    },
+    
+    setupWordAudio: function(){
+      soundManager.url = '/';
+      soundManager.debugMode = false;
+    },
+    
+    getWordAudio: function(index){
+      soundManager.destroySound('word');
+      $.ajax({
+        dataType: 'text',
+        url: "/wordnik/audio/" + dataSet[index],
+        success : function(result){
+          soundManager.onready(function() {
+            var aSoundObject = soundManager.createSound({
+             id:'word',
+             url: result,
+             onload: function(success){
+               if(!success)
+                  app.getWordAudio(index);
+             }
+            });
+          });
+        },
+        error: function (){
+          $img = $("<img>").attr('src', '/images/mute.png').attr('width', '22')
+                  .attr('height', '22').css("display", "none").attr("id", "mute");
+          $("#" + index).find("#audiolink").replaceWith($img);
+        }
+      });
+    }
+  };
+  
+  $(document).ready(function(){
+    app.setupKeyboard();
+    app.setupTabs();
+    app.setupCards();
+    app.setupLiveBinds();
+    app.setupWordAudio();
+    
+    $('.control').bind('click', function(){
+      // Cache all AJAX request; see populateCard for more info
+      if(loadCount < numberOfSlides){
+        app.populateCard(loadCount);
+        loadCount++;
+      }
+
+      // Determine new position, whether to go right or left
+  	  currentPosition = ($(this).attr('id')=='rightControl') ? currentPosition+1 : currentPosition-1;
+
+      app.getWordAudio(currentPosition);
+      $('.control').hide();
+      $('#slideInner').animate({
+        'marginLeft' : slideWidth*(-currentPosition)
+      }, function(){
+        // Hide / show controls
+          app.manageControls(currentPosition);
+      });
+      
+      return false;
+    });  
+  });
+  </script>
+<% end %>
+
+<div class='container'>
+  <br>
+  <div style="width: 200px; height: 300px; float: left; background: lightBlue; z-index: 30; position: absolute;">
+    <% if current_user %>
+      Welcome <%= current_user.name %>!
+      <%= link_to "Sign Out", signout_path %>
+    <% end %>
+    <ol>
+      Word list
+      <li>first</li>
+    </ol>
+  </div>
+  <div id="slideshow">
+    <div id="slidesContainer">
+    </div>
+  </div>  
+</div>

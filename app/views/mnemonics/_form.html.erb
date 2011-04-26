@@ -1,0 +1,6 @@
+<%= form_for [word, Mnemonic.new], :remote => true do |f| %>
+  <em style="margin-left: 35px;font: italic 11px verdana,arial,sans-serif;"> use acronyms or sentences that you are
+   already familiar with that related to the word. </em></span>
+	<%= f.text_area :comment %><br />
+	<%= f.submit "Submit" %>
+<% end %>

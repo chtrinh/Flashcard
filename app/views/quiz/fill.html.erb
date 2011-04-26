@@ -1,0 +1,14 @@
+<div id="question"> 
+  <p>
+    <%= @sentence %>
+  </p>
+</div>
+<hr>  
+<div id="answer" class="inner">
+  <% @answers.each do |answer|%>
+  <input type='checkbox' value='<%= answer.id %>' class='unique'/><%= answer.name %><br/>
+  <% end %>
+</div>
+<div id="controls">
+  <input type='button' value='Submit' id="Next"/>
+</div>

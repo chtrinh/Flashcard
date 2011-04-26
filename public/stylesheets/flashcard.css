@@ -1,0 +1,119 @@
+::selection {
+  background: yellow; /* Safari */
+}
+::-moz-selection {
+  background: yellow; /* Firefox */
+}
+body {  
+    font-family:Arial, Helvetica, sans-serif;  
+    font-size:62.5%;
+}
+.flashcard {
+  -moz-box-shadow: 0 0 5px black;
+  -webkit-box-shadow: 0 0 5px black;
+  box-shadow: 0 0 5px black;
+  background-color: #FFFFFF;
+  height: 290px;
+  margin: 5px;
+  text-align: left;
+  width: 640px;
+  position: relative;
+}
+
+.flashcard .pos {
+  font-family: helvetica neue,helvetica,arial,sans-serif;
+  font-size: 1em;
+  font-style: italic;
+  font-weight: bold;
+  margin: 5px 0 0 -15px;
+  padding: 0;
+}
+
+.flashcard .def-list {
+  margin: 0 1.7em 1.2em;
+}
+
+.flashcard .text-notselectable {
+  -webkit-user-select:none;
+  -moz-user-select:none;
+}
+
+.flashcard .card {
+  color: black;
+  padding: 20px 30px 20px 30px;
+}
+
+.flashcard .card .word {
+  font-size: 6em;
+  text-align: center;
+  margin-top: 90px;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+}
+
+.flashcard .card .title {
+  font-size: 2.3em;
+  text-align: center;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+}
+
+.flashcard .card .definition{
+  font-size: 1.7em;
+}
+
+.flashcard .card .example {
+  margin-left: 25px;
+  margin-right: 25px;
+  margin-bottom: 1em;
+  font-size: 1.5em;
+}
+
+.hidden{
+  display: none;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+}
+
+#slideshow {
+	margin:0 auto;
+	width:720px;
+	height:300px;
+	position:relative;
+}
+#slideshow #slidesContainer {
+  margin:0 auto;
+  width:650px;
+  height:300px;
+  overflow:auto; /* allow scrollbar */
+  position:relative;
+}
+#slideshow #slidesContainer .slide {
+  margin:0 auto;
+  width:540px; /* reduce by 20 pixels of #slidesContainer to avoid horizontal scroll */
+  height:300px;
+}
+
+/** 
+ * Slideshow controls style rules.
+ */
+.control {
+  display:block;
+  width:39px;
+  height:300px;
+  position:absolute;
+  cursor: pointer;
+  z-index:10;
+  margin:0px;
+  padding:0px;
+}
+#leftControl {
+  top:0;
+  left:38px;
+  background:transparent url(../images/left_tab.png) no-repeat center;
+}
+#rightControl {
+  top:0;
+  right:39px;
+  background:transparent url(../images/right_tab.png) no-repeat center;
+}

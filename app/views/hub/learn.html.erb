@@ -1,0 +1,407 @@
+<% content_for :head do %>
+<%= stylesheet_link_tag "flashcard", "footer", "mnemonic", "mp3-player-button" %>
+<%= javascript_include_tag "jquery.keyNavi", "jquery.textSelector", "jquery.wrapText", "soundmanager2-nodebug-jsmin" %>
+  
+  <script type="text/javascript">
+  var slideWidth = 650;
+  var currentPosition = 0;
+  var loadCount = 2; // preloaded 2 cards on first load.
+  // dataSets of the words from a set; note they are randomized from the server. 
+  var dataSet = <%= raw(@words.collect(&:name).inspect) %>; 
+  var dataSetId = <%= raw(@words.collect(&:id).inspect) %>; 
+  var numberOfSlides = <%= @words.size %>;
+  
+  var app = {
+    /**
+    * Binds your keyboard Left, Right, Up, Down.
+    * Left and right binds move to the next flashcard in the sequence. 
+    * Up and down toggles the hidden div to display the last selected word's definition. 
+    */
+    setupKeyboard: function(){
+      $.keyNavi(function(){
+        if(!$("#leftControl").is(":hidden"))
+          $("#leftControl").trigger("click");
+      }, function(){
+        if(!$("#rightControl").is(":hidden"))
+          $("#rightControl").trigger("click");
+      }, function(){
+        $('#footerSlideContent').slideToggle(true); 
+      }, function(){
+        $('#footerSlideContent').slideToggle(false);
+      });
+    },
+    
+    /**
+    * Highlighted/Selected words are checked via REGEX to ensure that they are acutal 
+    * words that can be looked up and defined. 
+    * Words are defined with a hidden div 
+    */
+    setupHighlighter: function(){
+      $('#footerSlideButton').click(function () {
+          $('#footerSlideContent').slideToggle();
+          return false;
+      });
+      
+      $.textSelector('#slideshow, .tab_container, #footerSlideContent', function(string){
+        // Get definition of selected text and create DOM elements to display it.
+        $.ajax({
+          dataType: 'json',
+          url: "/wordnik/definitions/" + string,
+          success : function(result){
+            var parent = $("#footerSlideContent");
+            var ol = $('#footerSlideContent .def-list');
+            parent.find('.word').html(result[0].word);
+            ol.html("");
+
+            $.each(result, function(index, data){
+              var posDiv = '<div class="pos" id="'+ data.partOfSpeech +'">&ndash;' + data.partOfSpeech + '</div>';
+              if(ol.find('.pos[id="'+ data.partOfSpeech +'"]').length == 0)
+                $(posDiv).appendTo(ol);
+              $('<li>' + data.text + '</li>').appendTo(ol);
+            });
+
+            if(parent.is(":hidden"))
+              $("#footerSlideButton").trigger("click");
+          }
+        });
+      });
+    },
+    
+    /**
+    * Set up tabs to either hide or show thier respective <div> elements. 
+    */ 
+    setupTabs: function(){
+      $(".tab_content").hide(); //Hide all content
+    	$("ul.tabs li:first").addClass("active").show(); //Activate first tab
+    	$(".tab_content:first").show(); //Show first tab content
+
+    	//On Click Event
+    	$("ul.tabs li").click(function() {
+
+    		$("ul.tabs li").removeClass("active"); //Remove any "active" class
+    		$(this).addClass("active"); //Add "active" class to selected tab
+    		$(".tab_content").hide(); //Hide all tab content
+
+    		var activeTab = $(this).find("a").attr("href"); //Find the href attribute value to identify the active tab + content
+    		$(activeTab).fadeIn(); //Fade in the active ID content
+    		return false;
+    	});
+    },
+    
+    /**
+    * Ensure all flashcards are of the same size and width, flashcard are arranged 
+    * in a horizontal manner and acts like a window frame exposing hidden cards. 
+    */
+    setupCards: function(){
+      $.each(dataSet, function(i, word){
+        var slideDiv = "<div class='slide'><div id=" + i + 
+        " class='flashcard'><div class='card'><div class='title'>" + word +
+        "<a href='#' class='sm2_button' id='audiolink'></a>" +
+        "</div><div class='definition'><ol class='def-list'></ol>" +
+        "</div></div></div></div>";
+        $('#slidesContainer').append(slideDiv);
+      });
+            
+      // Should pre-load 2 before rendering and not use AJAX
+      app.populateCard(0);
+      app.getWordAudio(0);
+      app.populateCard(1);
+
+      // Remove scrollbar in JS
+      $('#slidesContainer').css('overflow', 'hidden');
+
+      var $cards = $('.slide');
+      $cards.wrapAll('<div id="slideInner"></div>')
+    	  .css({
+          'float' : 'left',
+          'width' : slideWidth
+        });
+
+      // Set #slideInner width equal to total width of all slides
+      $('#slideInner').css('width', slideWidth * numberOfSlides);
+
+      // Insert controls in the DOM
+      $('#slideshow')
+        .prepend('<span class="control" id="leftControl"></span>')
+        .append('<span class="control" id="rightControl"></span>');
+
+      // Hide left arrow control on first load
+      this.manageControls(currentPosition);
+    },
+    
+    /**
+    * Determines the next position of the card and whether controls and text on the card 
+    * should be shown. 
+    * position: integer representation of the next index card. 
+    */
+    manageControls: function(position){
+      // Hide left arrow if position is first slide
+  	  if(position==0){ $('#leftControl').hide() } else{ $('#leftControl').show() }
+  	  // Hide right arrow if position is last slide
+      if(position==numberOfSlides-1){ $('#rightControl').hide() } else{ $('#rightControl').show() } 
+      // Make visible flash card's text selectable.
+      $("#" + position).removeClass("text-notselectable");
+    },
+    
+    /**
+    * Populate card from the server via AJAX. Populated content becomes static, meaning each card
+    * is only populated once via AJAX and stored on to HTML (until the page is refresehed).
+    * index: integer representation of the index from array of words. (current position)
+    */
+    populateCard: function(index){
+      $.ajax({
+        dataType: 'json',
+        url: "/wordnik/flashcard/" + dataSet[index],
+        success : function(result){
+          var $container = $('#'+ index);
+          var $content = $container.find('.card');
+          var $ol = $content.find('.def-list');
+          var definitions = result[0];
+          var examples = result[1].text;
+          var synonyms = result[2];
+          
+          $.each(definitions, function(index, data){
+            var $posDiv = $('<div class="pos" id="'+ data.partOfSpeech +'">&ndash;' + data.partOfSpeech + '</div>');
+            if($ol.find('.pos[id="'+ data.partOfSpeech +'"]').length == 0) {
+              $posDiv.appendTo($ol);
+            }
+            var $def = $('<li>' + data.text + '</li>');
+            $def.appendTo($ol);
+          });
+                    
+          var $example = $('<div class="example"><em>Example: </em><span id="exampletext">'+ examples +'</span></div>');
+          $example.wrapText(dataSet[index], true)
+            .appendTo('#'+ index + ' .card');
+          
+          if(synonyms != null){
+            var $synonym = $("<br><br><label>Synonym: </label><span>" + synonyms + "</span>");
+            $synonym.appendTo($example);
+          }
+          
+          // readjust font size 
+          if($content.outerHeight() >= $container.height()){
+            $ol.find('li').css('font-size', '.75em');
+            $ol.find('.pos').css('font-size', '.8em');
+            $example.css('font-size', '1.3em');
+          }
+        }
+      });
+    },
+    
+    /**
+    * Fetches the Mnemonics associated with the current word. Content results are not stored on the
+    * html but are rewritten after each new flashcard "word" request.
+    * index: integer representation of the index from array of words. (current position)
+    */
+    getMnemonicList: function(index){
+      $('.commentlist').css('display', 'block').html();
+      var $selectTab = $($('.tabs li')[1]);
+      $selectTab.unbind('click.mnemonic');
+      $selectTab.bind('click.mnemonic', function() {
+        $('.commentlist').html('');
+        $.ajax({
+          dataType: 'html',
+          type: 'GET',
+          url: "/words/" + dataSetId[index] + "/mnemonics",
+          success: function(result){
+            $('.commentlist').html(result).attr('id', dataSetId[index]).fadeIn();
+          }
+        });
+        return false;
+      });
+    },
+    
+    /**
+    * Fetches current user's selected or created mnemonic associated with the current 
+    * word on the flash card.
+    * index: integer representation of the index from array of words. (current position)
+    */
+    getUserMnemonic: function(index){
+      $("ul.tabs li:eq(0)").trigger('click');
+      $.ajax({
+        dataType: 'json',
+        type: 'GET',
+        url: "/words/" + dataSetId[index] + "/mnemonics/current",
+        success: function(result){
+          if(result != null){
+            if(result.mnemonic != null){
+              mnemonic = result.mnemonic.mnemonic;
+              $('#editM form').attr('action', 
+                "/words/" + result.word + "/mnemonics/" + mnemonic.id)
+                .attr('method', 'PUT');
+              $('#selectedM blockquote').attr('id', mnemonic.id)
+                .html(mnemonic.comment).parent().show();
+              $('#editM').hide();
+            }else{
+              $('#editM form').attr('action', "/words/" + result.word + "/mnemonics");
+              $('#selectedM').hide();
+              $('#editM').show();
+            }
+          }
+        }
+      });
+    },
+    
+    /**
+    * Set up "live" binds on all <li> elements in the list of selected-able Mnemonics from 
+    * other users (from facebook). Selected elements are then inform to the server and set
+    * as the current user's default mnemonic for this word.       
+    */
+    setupLiveBinds: function(){
+      $('#tab2 #content ul li').live('click.selectMnemonic', function(){
+        $('#selectedM blockquote').html($(this).find('p').html()).parent().show();
+        $('#editM').hide();
+        $('#selectedM').show();
+        $("ul.tabs li:eq(0)").trigger('click');
+        $.ajax({
+          dataType: 'json',
+          type: 'PUT',
+          url: "/words/" + $(this).parent().attr('id') + "/mnemonics/" + $(this).attr('id'),
+          success: function(result){
+            $('#editM form').attr('action', "/words/" + result.id + "/mnemonics")
+              .attr('method', 'PUT');
+            if(result.comment != null){
+              $('#selectedM blockquote').html(result.comment).parent().show();
+              $('#editM').hide();
+            }else{
+              $('#selectedM').hide();
+              $('#editM').show();
+            }
+            $('#tab1').fadeIn();
+          }
+        });
+      });
+      
+      // Set up the toggle binds for all User created edits links
+      $('#edit-toggle').live('click.editToggle', function() {
+        $('#selectedM').hide();
+        $('#editM textarea').val($('#selectedM blockquote').html());
+        $('#editM').show();
+        return false;
+      }); 
+      
+      $('#audiolink').live('click.playAudio', function(){
+        soundManager.play('word');
+        return false;
+      });
+    },
+    
+    setupWordAudio: function(){
+      soundManager.url = '/';
+      soundManager.debugMode = false;
+    },
+    
+    getWordAudio: function(index){
+      soundManager.destroySound('word');
+      $.ajax({
+        dataType: 'text',
+        url: "/wordnik/audio/" + dataSet[index],
+        success : function(result){
+          soundManager.onready(function() {
+            var aSoundObject = soundManager.createSound({
+             id:'word',
+             url: result,
+             onload: function(success){
+               if(!success)
+                  app.getWordAudio(index);
+             }
+            });
+          });
+        },
+        error: function (){
+          $img = $("<img>").attr('src', '/images/mute.png').attr('width', '22')
+                  .attr('height', '22').attr("id", "mute");
+          $("#" + index).find("#audiolink").replaceWith($img);
+        }
+      });
+    }
+  };
+  
+  $(document).ready(function(){
+    app.setupKeyboard();
+    app.setupHighlighter();
+    app.setupTabs();
+    app.setupCards();
+    app.setupLiveBinds();
+    app.setupWordAudio();
+    
+    $('.control').bind('click', function(){
+      // Cache all AJAX request; see populateCard for more info
+      if(loadCount < numberOfSlides){
+        app.populateCard(loadCount);
+        loadCount++;
+      }
+      // Make current visible slide not selectable
+      $("#" + currentPosition).addClass("text-notselectable");
+      $("#editM textarea").val('');
+      // Determine new position, whether to go right or left
+  	  currentPosition = ($(this).attr('id')=='rightControl') ? currentPosition+1 : currentPosition-1;
+  	  
+  	  app.getUserMnemonic(currentPosition);
+  	  app.getMnemonicList(currentPosition);
+  	  app.getWordAudio(currentPosition);
+
+      $('.control').hide();
+      $('#slideInner').animate({
+        'marginLeft' : slideWidth*(-currentPosition)
+      }, function(){
+        // Hide / show controls
+          app.manageControls(currentPosition);
+      });
+      
+      return false;
+    });  
+  });
+  </script>
+<% end %>
+
+<div class='container'>
+  <br>
+  <div style="width: 200px; height: 300px; float: left; background: lightBlue; z-index: 30; position: absolute;">
+    <% if current_user %>
+      Welcome <%= current_user.name %>!
+      <%= link_to "Sign Out", signout_path %>
+    <% end %>
+    <ol>
+      Word list
+      <li>first</li>
+      
+    </ol>
+  </div>
+  
+
+  <div id="slideshow">
+    <div id="slidesContainer">
+    </div>    
+    <hr/>
+  </div>
+  <br>
+  <div id="mnemonic">
+    <ul class="tabs">
+        <li><a href="#tab1">Mnemonic</a></li>
+        <li><a href="#tab2">Select</a></li>
+    </ul>
+    <div class="tab_container">
+      <div id="tab1" class="tab_content" style="display:block;">
+        <%= render :partial => 'mnemonics/show', :locals => {:word => @words.first} %>
+      </div>
+      <div id="tab2" class="tab_content" style="display:none;">
+         <div id="content">
+           <ul class="commentlist" <%= "id='#{@words.first.id}'"%>>
+             <%= render :partial => "mnemonics/index", :collection => @words.first.mnemonics, :as => :mnemonic %>
+           </ul>
+         </div>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="footerSlideContainer">
+	<div id="footerSlideButton">Highlight any word for its definition</div>
+	<div id="footerSlideContent">
+	  <span style="float:right; height:40px; width:300px; padding:10px;"><em>Highlighting words work here as well</em></span>
+		<div class="word">No words have been highlight with your mouse.</div>
+		<ol class="def-list">
+    </ol>
+	</div>
+</div>
+

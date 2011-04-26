@@ -1,0 +1,9 @@
+<% m = @user.getMnemonic(word) %>
+<div id="selectedM" <%= "style='display:none;'" if m.nil? %>>
+  <a id="edit-toggle" href="#">edit</a>
+  <blockquote <%= "id='#{m.id}'" unless m.nil? %>><%= m.comment unless m.nil? %></blockquote>
+</div>
+<div id="editM" <%= "style='display:none;'" unless m.nil? %>>
+  <%= render :partial => "mnemonics/form",  :locals => {:word => word} %>
+</div>
+

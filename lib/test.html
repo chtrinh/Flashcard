@@ -1,0 +1,77 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+  	<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js"></script>
+  	<script>
+  	</script>
+    <!-- <link rel="stylesheet" href="blueprint/screen.css" type="text/css" media="screen, projection">
+    <link rel="stylesheet" href="blueprint/print.css" type="text/css" media="print"> 
+    <link rel="stylesheet" href="blueprint/typography.css" type="text/css">   -->
+    <!--[if lt IE 8]><link rel="stylesheet" href="blueprint/ie.css" type="text/css" media="screen, projection"><![endif]-->
+    <link rel="stylesheet" href="css/flashcard.css" type="text/css">
+    <link rel="stylesheet" href="css/footer.css" type="text/css">
+    <style>
+      body{
+        margin: 0px 0px 0px 0px;
+      }
+    </style>
+    
+    <style>    
+      #slideshow #slidesContainer {
+        margin:0 auto;
+        width:650px;
+        height:325px;
+        overflow:auto; /* allow scrollbar */
+        position:relative;
+        top: 20px;
+      }
+      
+      #slideshow #slidesContainer .slide {
+        margin:0 auto;
+        width:650px; /* reduce by 20 pixels to avoid horizontal scroll */
+        height:325px;
+      }
+      
+    </style>
+    
+    <script>
+      $(document).ready(function() {
+        $("#a").click(function(){
+      		var text = document.getElementById('a');
+      		alert(text);
+      		if ($.browser.msie) {
+      			var range = document.body.createTextRange();
+      			range.moveToElementText(text);
+      			range.select();
+      		} else if ($.browser.mozilla || $.browser.opera) {
+      			var selection = window.getSelection();
+      			      			alert(selection);
+      			var range = document.createRange();
+      			range.selectNodeContents(text);
+      			selection.removeAllRanges();
+      			selection.addRange(range);
+            alert(selection);
+      		} else if ($.browser.safari) {
+      			var selection = window.getSelection();
+      			selection.setBaseAndExtent(text, 0, text, 1);
+      		}
+      	});
+      });
+    </script>
+  </head>
+  <body>
+    <div class='container'>
+  	
+  	</div>
+  	
+  	<div id="footerSlideContainer">
+  	  <div id="a">asdfasdf this is asdfasdfasdf dingo.</div>
+    	<div id="footerSlideButton">Highlight any word and double click for definition</div>
+    	<div id="footerSlideContent">
+    		<div>Some crazy ass definitions regarding the word just clicked.</div>
+    	</div>
+    </div>
+  	
+  	
+  </body>
+</html>

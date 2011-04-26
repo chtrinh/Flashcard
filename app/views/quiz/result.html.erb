@@ -1,0 +1,13 @@
+<div>
+  <label>Score: </label><%= (@correct_count.to_f/@word_count * 100).to_i %>%<br>
+  <label>Correct: </label><%= @correct_count %> <br>
+  <label>Missed: </label><%= @missed_count %> <br>
+  <% if @missed_count > 0 %>
+    <label>Words missed:</label><br>
+    <ol>
+    <% @incorrect_words.each do |word|%>
+      <li><%= word.name %></li>
+    <% end %>
+    </ol>
+  <% end %>
+</div>

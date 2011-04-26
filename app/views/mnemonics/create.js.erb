@@ -1,0 +1,5 @@
+/* Add the new comment to the bottom of the comments list */
+$("#editM").hide();
+$("#selectedM blockquote").html('<%= escape_javascript(@mnemonic.comment) %>');
+$("#selectedM").show();
+

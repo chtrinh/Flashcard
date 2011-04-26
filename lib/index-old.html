@@ -1,0 +1,395 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>FlashCards</title>
+
+<script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.4.4/jquery.min.js"></script>
+<link rel="stylesheet" href="css/flashcard.css" type="text/css">
+<link rel="stylesheet" href="css/footer.css" type="text/css">
+
+<script type="text/javascript">
+(function( $ ){
+  $.textSelector = function(callback) {
+    $(document).bind('mouseup', function(){
+      var st = getSelected();
+      if((st!='') && isValid(st.toString())){
+        callback.apply(this, [st.toString()]);
+        return false;
+      }
+    });
+  };
+  
+  function isValid(parm) {
+    var lwr = 'abcdefghijklmnopqrstuvwxyz';
+    var upr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    var val = lwr + upr;
+    for (i=0; i<parm.length; i++) {
+      if (val.indexOf(parm.charAt(i),0) == -1) return false;
+    }
+    return true;
+  };
+  
+  function getSelected() {
+    var t = '';
+    if(window.getSelection){
+      t = window.getSelection();
+    }else if(document.getSelection){
+      t = document.getSelection();
+    }else if(document.selection){
+      t = document.selection.createRange().text;
+    }
+    return t;
+  };
+})( jQuery );
+
+
+
+// if(!window.Kolich){
+//   Kolich = {};
+//   Chtrinh = {};
+// }
+
+// Kolich.Selector = {};
+// Kolich.Selector.getSelected = function(){
+//   var t = '';
+//   if(window.getSelection){
+//     t = window.getSelection();
+//   }else if(document.getSelection){
+//     t = document.getSelection();
+//   }else if(document.selection){
+//     t = document.selection.createRange().text;
+//   }
+//   
+//   return t;
+// }
+
+// Kolich.Selector.mouseup = function(){
+//   var st = Kolich.Selector.getSelected();
+//   if((st!='') && isValid(st.toString())){
+//     var apikey = "8515e08eb04f0fcc8900d0161ad03bb5d0c4e03d40c0056e8";
+//     $.ajax({
+//       url:"http://api.wordnik.com/api/word.json/cat/definitions?api_key=8515e08eb04f0fcc8900d0161ad03bb5d0c4e03d40c0056e8",
+//       dataType: 'jsonp',
+//       success: function(){
+//         alert("win");
+//       }
+//     });
+//     // AJAX call to server to fetch web services for definition.
+//     
+//     st.removeAllRanges(); // Non-IE
+//     
+//     if($('#footerSlideContent').is(":hidden"))
+//       $("#footerSlideButton").trigger("click");
+//   }
+// }
+
+// Chtrinh.Navi = {};
+// Chtrinh.Navi.keydown = function(e){
+//   var keyCode = e.keyCode || e.which,
+//         arrow = {left: 37, right: 39 };
+// 
+//     switch (keyCode) {
+//       case arrow.left:
+//         if(!$("#leftControl").is(":hidden"))
+//           $("#leftControl").trigger("click");
+//       break;
+//       case arrow.right:
+//         if(!$("#rightControl").is(":hidden"))
+//           $("#rightControl").trigger("click");
+//       break;
+//     }
+// }
+// 
+// function isValid(parm) {
+//   var lwr = 'abcdefghijklmnopqrstuvwxyz';
+//   var upr = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+//   var val = lwr + upr;
+//   for (i=0; i<parm.length; i++) {
+//     if (val.indexOf(parm.charAt(i),0) == -1) return false;
+//   }
+//   return true;
+// }
+
+$(document).ready(function(){
+  $('#footerSlideButton').click(function () {
+    $('#footerSlideContent').slideToggle(function(){
+      if($('#footerSlideContent').is(":hidden"))
+        $("#footerSlideButton").html("Highlight any word for its definition");
+      else
+        $("#footerSlideButton").html("Close");
+    });
+  });
+  
+  // $(document).bind("mouseup", Kolich.Selector.mouseup);
+  $.textSelector(function(string){
+      alert(string);
+  });
+  // $(document).bind("keydown", Chtrinh.Navi.keydown);
+  
+  var currentPosition = 0;
+  var slideWidth = 650;
+  var dataSet = [
+    { 'word': "Iced",
+      'def': "very cold"},
+    { 'word': "upgrade",
+      'def': "make better"},
+    { 'word': "water",
+      'def': "liquid"}
+  ];
+  var numberOfSlides = dataSet.length;
+  
+  $.each(dataSet, function(index, data){
+    var slideDiv = "<div class='slide'><div id=" + index + 
+    " class='flashcard hidden'><div class='card'><div class='title'>" + data['word'] + 
+    "</div><div class='definition' id='text'>" + data['def'] + 
+    "</div></div></div></div>";
+    $('#slidesContainer').append(slideDiv);
+  }); 
+  var slides = $('.slide');
+
+  // Remove scrollbar in JS
+  $('#slidesContainer').css('overflow', 'hidden');
+
+  // Wrap all .slides with #slideInner div
+  slides.wrapAll('<div id="slideInner"></div>')
+	  .css({
+      'float' : 'left',
+      'width' : slideWidth
+    });
+
+  // Set #slideInner width equal to total width of all slides
+  $('#slideInner').css('width', slideWidth * numberOfSlides);
+
+  // Insert controls in the DOM
+  $('#slideshow')
+    .prepend('<span class="control" id="leftControl"></span>')
+    .append('<span class="control" id="rightControl"></span>');
+
+  // Hide left arrow control on first load
+  manageControls(currentPosition);
+
+  // Create event listeners for .controls clicks
+  $('.control').bind('click', function(){
+    $("#" + currentPosition).addClass("hidden");
+    // Determine new position
+	  currentPosition = ($(this).attr('id')=='rightControl') ? currentPosition+1 : currentPosition-1;
+    
+    $('.control').hide();
+    $('#slideInner').animate({
+      'marginLeft' : slideWidth*(-currentPosition)
+    }, function(){
+      // Hide / show controls
+        manageControls(currentPosition);
+    });
+  });
+
+  // manageControls: Hides and Shows controls depending on currentPosition
+  function manageControls(position){
+    // Hide left arrow if position is first slide
+	  if(position==0){ $('#leftControl').hide() } else{ $('#leftControl').show() }
+	  // Hide right arrow if position is last slide
+    if(position==numberOfSlides-1){ $('#rightControl').hide() } else{ $('#rightControl').show() }
+    
+    // Make visible flash card text selectable.
+    $("#" + position).removeClass("hidden");
+  }	
+  
+  $("#create").bind('click', function(){
+    if(!$(this).hasClass("tab-selected")){
+      $(this).addClass("tab-selected");
+      $("#browse").removeClass("tab-selected");
+      $("#show").removeClass("tab-selected");
+      $("#selectinput").hide();
+      $("#showinput").hide();
+      $("#userinput").show();
+    }
+  });
+  
+  $("#browse").bind('click', function(){
+    if(!$(this).hasClass("tab-selected")){
+      $(this).addClass("tab-selected");
+      $("#create").removeClass("tab-selected");
+      $("#show").removeClass("tab-selected");
+      $("#selectinput").show();
+      $("#userinput").hide();
+      $("#showinput").hide();
+    }
+  });
+  
+  $("#show").bind('click', function(){
+    if(!$(this).hasClass("tab-selected")){
+      $(this).addClass("tab-selected");
+      $("#create").removeClass("tab-selected");
+      $("#browse").removeClass("tab-selected");
+      $("#selectinput").hide();
+      $("#userinput").hide();
+      $("#showinput").show();
+    }
+  });
+  
+});
+</script>
+
+<style type="text/css">
+
+#mnemonic{
+  height: 200px;
+  width: 660px;
+  margin: 0 auto;
+  position: relative;
+}
+
+#mnemonic .content {
+  width: 618px;
+  height: 200px;
+  background: #8AA4B7;
+  -moz-box-shadow: 2px 2px 2px #728996;
+  -webkit-box-shadow: 2px 2px 2px #728996;
+  box-shadow: 2px 2px 2px #728996;
+  display: block;
+/*  z-index: 10;*/
+  position:relative;
+  margin: 0 auto;
+} 
+
+#mnemonic .content .inner {
+  padding: 10px 0px 10px 0px;
+}
+
+#mnemonic .content .inner hr{
+  margin: 10px;
+}
+
+#mnemonic .content .inner textarea{
+  height: 100px;
+  width: 575px;
+  margin: 10px 20px 10px 20px;
+}
+
+#mnemonic .content .inner input{
+  margin-left: 540px;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+}
+
+.ulnofloat {
+  font: bold 11px verdana,arial,sans-serif;
+  list-style-type: none;
+  margin: 0px;
+  padding-left: 150px;
+  text-align: left;
+}
+
+.ullifloat {
+  padding-top: 5px;
+  padding-bottom: 2px;
+  width:150px;
+  text-align:center;
+  -moz-box-shadow: 2px 2px 2px #728996;
+  -webkit-box-shadow:  2px 2px 2px #728996;
+  box-shadow:  2px 2px 2px #728996;
+  border-top: 0px;
+  border-right: 1px;
+  -moz-border-radius-bottomleft: 5px;
+  -moz-border-radius-bottomright: 5px;
+  -webkit-border-bottom-left-radius: 5px;
+  -webkit-border-bottom-right-radius: 5px;
+  /* don't forget Opera & KHTML too */
+  cursor: pointer;
+  -webkit-user-select:none;
+  -moz-user-select:none;
+  float: left;
+  margin-right: 10px;
+  margin-top: 0px;
+  background: #CDDEEF;
+}
+
+.tab-selected{
+  background: #8AA4B7; 
+  z-index:10; 
+  position:relative;
+}
+
+
+.comment{
+  border:solid 1px #DEDEDE;
+  background:#FFFFCC;
+  padding:4px;
+  text-align:left;
+  margin:10px;
+}
+
+.mine{
+  border:solid 1px #DEDEDE;
+  background:#FFFFCC;
+  padding:4px;
+  text-align:left;
+  margin:20px;
+  margin-top: 10px;
+  width:570px;
+  height:150px;
+}
+
+.mine blockquote {
+  margin:0.5em;
+  padding:1em;
+  font-style:italic;
+  font-size:1em;
+}
+
+</style>
+</head>
+<body>
+<div class='container'>
+  <br>
+  <div id="slideshow">
+    <div id="slidesContainer">
+     <!-- dynamically inserted flashcards -->
+    </div>
+    <hr/>
+  </div>  
+  <br>
+  <div id="mnemonic">
+    <div id="userinput" class="content" style="display:none;">
+      <div class="inner">
+        <span><span style="font: bold 15px verdana,arial,sans-serif;">Mnemonic</span><br>
+          <em style="margin-left: 35px;font: italic 11px verdana,arial,sans-serif;"> use acronyms or sentences that you are
+           already familiar with that related to the word. </em></span>
+        <textarea></textarea>
+          <input type="submit" value="Submit">
+      </div>
+    </div>
+    
+    <div id="selectinput" class="content" >
+      <div class="inner">
+        <span style="font: bold 15px verdana,arial,sans-serif;">User Generated Mnemonic</span>
+        <div class="comment">Solid messsxxxxxxx....1sage box</div> 
+        <div class="comment">Solid message box</div>
+        <div class="comment">Solid message box</div> 
+      </div>
+    </div>
+    
+    <div id="showinput" class="content" style="display:none;">
+      <div class="inner">
+        <div class="mine">
+          <blockquote>This is my Mnemonic thank you </blockquote>
+        </div>
+      </div>
+    </div>
+    
+    <ul class="ulnofloat">
+      <li class="ullifloat" id="show">My Mnemonic</a></li>
+      <li class="ullifloat" id="create">Create</a></li>
+      <li class="ullifloat tab-selected" id="browse">Select/Browse</a></li>
+    </ul>
+  </div>
+</div>
+<div id="footerSlideContainer">
+	<div id="footerSlideButton">Highlight any word for its definition</div>
+	<div id="footerSlideContent">
+		<div>No words have been highlight with your mouse.</div>
+	</div>
+</div>
+</body>
+</html>

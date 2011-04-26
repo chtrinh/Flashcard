@@ -1,0 +1,83 @@
+<% content_for :head do %>
+  <script type="text/javascript">
+    function getFillQuestion(wordIndex, $selector){
+      $.ajax({
+        dataType: 'html',
+        url: "/quiz/fill/" + wordIndex,
+        success : function(result){
+          $selector.html(result);
+        }
+      });
+    }
+    
+    function getResult(wordArray, answerArray, $selector){
+      $.ajax({
+        type: "POST",
+        data: {"word_id": wordArray, "answers": answerArray},
+        url: "/quiz/result",
+        dataType: 'html',
+        success : function(result){
+          $selector.html(result);
+        }
+      });
+    }
+  
+    $(function(){
+      //Probably should save wordId in a session states in rails instead.
+      var wordId = <%= raw(@words.collect(&:id).inspect) %>; 
+      var answer = [];
+      var index = 0;
+      var $unique = $('input.unique');
+      $unique.click(function() {
+         $unique.filter(':checked').not(this).removeAttr('checked');
+      });
+
+      $('#Next').live("click", function(){
+        if($("input.unique:checked").length){
+          answer.push($('input.unique:checked').val());
+        }else{
+          answer.push('');
+        }
+    
+        index++;
+        if(index < wordId.length){
+          getFillQuestion(wordId[index], $("#quiz"));
+        }else{
+          getResult(wordId, answer, $("#quiz"));
+        }
+      });
+    });
+  </script>
+  <style>
+    .inner {
+      width: 50%;
+      margin: auto;
+    }
+    
+    #controls{
+      float: right;
+    }
+  </style>
+<% end %>
+<div class='container'>
+  <br>
+  <div id="title" class="inner">
+    <h2>Quiz yourself</h3>
+  </div>
+  <div id="quiz" class="inner">
+    <div id="question"> 
+      <p>
+        <%= @sentence %>
+      </p>
+    </div>
+    <hr>  
+    <div id="answer" class="inner">
+      <% @answers.each do |answer|%>
+      <input type='checkbox' value='<%= answer.id %>' class='unique'/><%= answer.name %><br/>
+      <% end %>
+    </div>
+    <div id="controls">
+      <input type='button' value='Submit' id="Next"/>
+    </div>
+  </div>
+</div>
